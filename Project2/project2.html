@@ -285,6 +285,11 @@ function SetAmbientLight( param )
 	DrawScene();
 }
 
+function SetSpecularLight( param )
+{
+	meshDrawer.setSpecularLight( param.value/100 );
+	DrawScene();
+}
 
 function LoadObj( param )
 {

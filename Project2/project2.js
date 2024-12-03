@@ -71,6 +71,8 @@ class MeshDrawer {
 		this.lightPos = [1.0, 1.0, 1.0]; // Initial light position
     	this.ambient = 0.5; // Default ambient light intensity
     	this.enableLightingFlag = false; // Lighting initially disabled	
+		this.specularIntensity = 0.5; // Default specular light intensity
+		this.specularIntensityLoc = gl.getUniformLocation(this.prog, 'specularIntensity');
 	}
 
 	setMesh(vertPos, texCoords, normalCoords) {
@@ -117,6 +119,7 @@ class MeshDrawer {
 		///////////////////////////////
 		gl.uniform3fv(this.lightPosLoc, this.lightPos);
     	gl.uniform1f(this.ambientLoc, this.ambient);
+		gl.uniform1f(this.specularIntensityLoc, this.specularIntensity);
     	gl.uniform1i(this.enableLightingLoc, this.enableLightingFlag);
 
 		if (this.enableLightingFlag) {
@@ -184,6 +187,10 @@ class MeshDrawer {
 		this.enableLightingFlag = show;
 	}
 	
+	setSpecularLight(intensity) {
+		this.specularIntensity = intensity;
+	}
+	
 	setAmbientLight(ambient) {
 		//console.error("Task 2: You should implement the lighting and implement this function ");
 		/**
@@ -244,6 +251,7 @@ const meshFS = `
 			uniform vec3 color; 
 			uniform vec3 lightPos;
 			uniform float ambient;
+			uniform float specularIntensity; // New uniform for specular intensity
 
 			varying vec2 v_texCoord;
 			varying vec3 v_normal;
@@ -263,9 +271,17 @@ const meshFS = `
 					// Introduce directional ambient light by scaling it based on angle with normal
 					float directionalAmbient = ambient * max(dot(normalizedNormal, lightDir), 0.0);
 
-					// Combine ambient and diffuse lighting
-					vec3 lighting = directionalAmbient + diffuse * color;
+					vec3 viewDir = normalize(vec3(0.0, 0.0, 1.0)); // Kamera yönü (Z eksenine doğru)
+					vec3 reflectDir = reflect(-lightDir, normalizedNormal);
+					vec3 specular = vec3(0.0);
+					if (diffuse > 0.0) {
+						vec3 viewDir = normalize(vec3(0.0, 0.0, 1.0)); // Kamera yönü (Z eksenine doğru)
+						vec3 reflectDir = reflect(-lightDir, normalizedNormal);
+						float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0); // Shininess = 32
+						specular = specularIntensity * spec * vec3(1.0, 1.0, 1.0); // Beyaz specular
+					}
 
+					vec3 lighting = directionalAmbient + diffuse * color + specular;
 					// Apply the texture with lighting effect
 					gl_FragColor = texture2D(tex, v_texCoord) * vec4(lighting, 1.0);
 				}
@@ -289,4 +305,5 @@ function updateLightPos() {
 	if (keys['ArrowRight']) lightX -= translationSpeed;
 	if (keys['ArrowLeft']) lightX += translationSpeed;
 }
+
 ///////////////////////////////////////////////////////////////////////////////////
